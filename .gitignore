@@ -1,0 +1,77 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Streamlit - CRITICAL: protects your email!
+.streamlit/
+secrets.toml
+
+# IDEs
+.idea/
+.vscode/
+*.code-workspace
+
+# Jupyter
+.ipynb_checkpoints
+
+# Data and outputs
+data/
+*.csv
+*.xlsx
+*.h5
+*.db
+results/
+output/
+figures/
+*.png
+*.jpg
+*.pdf
+
+# Temporary files
+*.npy
+*.npz
+*.pkl
+*.pickle
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Secrets - double protection
+*api_key*
+*secret*
+*password*
+*token*
+*credential*
+config.ini
+settings.yaml
