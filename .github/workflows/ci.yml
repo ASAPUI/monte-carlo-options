@@ -1,0 +1,211 @@
+# .github/workflows/ci.yml
+# GitHub Actions CI Pipeline for Monte Carlo Options Pricing Engine
+# Runs on every push and pull request to main/master branches
+
+name: CI
+
+on:
+  push:
+    branches: [ main, master, develop ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+  pull_request:
+    branches: [ main, master, develop ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+
+# Cancel in-progress runs for the same branch to save resources
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Linting and type checking (single version, faster feedback)
+  lint-and-typecheck:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff mypy
+          if [ -f pyproject.toml ]; then
+            pip install -e .
+          elif [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          elif [ -f requirements-dev.txt ]; then
+            pip install -r requirements-dev.txt
+          fi
+      
+      - name: Run Ruff linting
+        run: ruff check .
+      
+      - name: Run Ruff formatting check
+        run: ruff format --check .
+      
+      - name: Run MyPy type checking
+        run: mypy src/ --ignore-missing-imports --show-error-codes
+
+  # Matrix testing across Python versions
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    needs: lint-and-typecheck  # Run tests only if linting passes
+    
+    strategy:
+      fail-fast: false  # Continue with other versions if one fails
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+        os: [ubuntu-latest]
+        include:
+          # Also test on Windows and macOS for Python 3.11 only
+          - python-version: '3.11'
+            os: windows-latest
+          - python-version: '3.11'
+            os: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+      
+      - name: Install dependencies (Ubuntu/macOS)
+        if: runner.os != 'Windows'
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f pyproject.toml ]; then
+            pip install -e ".[dev]"
+          elif [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+          # Ensure test dependencies are installed
+          pip install pytest pytest-cov pytest-xdist
+      
+      - name: Install dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          python -m pip install --upgrade pip
+          if (Test-Path pyproject.toml) {
+            pip install -e ".[dev]"
+          } elseif (Test-Path requirements.txt) {
+            pip install -r requirements.txt
+          }
+          pip install pytest pytest-cov pytest-xdist
+      
+      - name: Run tests with pytest
+        run: |
+          pytest tests/ -v --tb=short \
+            --cov=src \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            -n auto 2>/dev/null || \
+          pytest tests/ -v --tb=short \
+            --cov=src \
+            --cov-report=xml \
+            --cov-report=term-missing
+      
+      - name: Upload coverage to Codecov
+        if: matrix.python-version == '3.11' && matrix.os == 'ubuntu-latest'
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false
+          verbose: true
+
+  # Financial accuracy tests (separate job for clarity, runs on Python 3.11)
+  accuracy-tests:
+    name: Financial Accuracy Tests
+    runs-on: ubuntu-latest
+    needs: lint-and-typecheck
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f pyproject.toml ]; then
+            pip install -e ".[dev]"
+          elif [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+          pip install pytest
+      
+      - name: Run financial accuracy test suite
+        run: |
+          pytest tests/test_accuracy.py -v --tb=short \
+            -k "TestBSConvergence or TestPutCallParity or TestGreekSigns or TestAmericanEuropeanRelationship or TestBoundaryConditions" \
+            --hypothesis-seed=0
+      
+      - name: Generate accuracy report
+        if: always()
+        run: |
+          echo "## Financial Accuracy Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- BS Convergence: Validates MC vs closed-form within 0.5%" >> $GITHUB_STEP_SUMMARY
+          echo "- Put-Call Parity: Validates no-arbitrage bounds within 1%" >> $GITHUB_STEP_SUMMARY
+          echo "- Greek Signs: Validates theoretical sign constraints" >> $GITHUB_STEP_SUMMARY
+          echo "- American vs European: Validates early exercise premium" >> $GITHUB_STEP_SUMMARY
+          echo "- Boundary Conditions: Validates asymptotic behavior" >> $GITHUB_STEP_SUMMARY
+
+  # Build and verify package
+  build:
+    name: Build Package
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck, test]
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine check-wheel-contents
+      
+      - name: Build package
+        run: python -m build
+      
+      - name: Check wheel contents
+        run: check-wheel-contents dist/*.whl
+      
+      - name: Check package with twine
+        run: twine check dist/*
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 5
