@@ -29,3 +29,12 @@ A comprehensive, production-ready options pricing engine using Monte Carlo simul
 git clone &lt;repository-url&gt;
 cd monte_carlo_options
 pip install -r requirements.txt
+ 
+[![CI](https://github.com/ASAPUI/monte-carlo-options/actions/workflows/ci.yml/badge.svg)](https://github.com/ASAPUI/monte-carlo-options/actions/workflows/ci.yml)
+
+# Monte Carlo Options Pricing System
+[![CI](https://github.com/ASAPUI/monte-carlo-options/actions/workflows/ci.yml/badge.svg)](https://github.com/ASAPUI/monte-carlo-options/actions/workflows/ci.yml)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+# Monte Carlo Options Pricing System

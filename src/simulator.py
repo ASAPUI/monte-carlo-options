@@ -11,7 +11,7 @@ from typing import Tuple, Optional
 # NUMBA JIT-COMPILED CORE FUNCTIONS (10-100x faster)
 # ============================================================================
 
-@jit(nopython=True, parallel=True, cache=True)
+@jit(nopython=True, parallel=True, cache=False)
 def _gbm_paths_numba(S0: float, r: float, sigma: float, T: float, 
                      n_steps: int, n_sims: int, seed: int) -> np.ndarray:
     """Fast GBM path generation using Numba."""
@@ -31,7 +31,7 @@ def _gbm_paths_numba(S0: float, r: float, sigma: float, T: float,
     
     return paths
 
-@jit(nopython=True, parallel=True, cache=True)
+@jit(nopython=True, parallel=True, cache=False)
 def _gbm_paths_antithetic_numba(S0: float, r: float, sigma: float, T: float, 
                                  n_steps: int, n_sims: int, seed: int) -> np.ndarray:
     """Fast GBM with antithetic variates."""
@@ -53,7 +53,7 @@ def _gbm_paths_antithetic_numba(S0: float, r: float, sigma: float, T: float,
     
     return paths
 
-@jit(nopython=True, cache=True)
+@jit(nopython=True, cache=False)
 def _terminal_values_numba(S0: float, r: float, sigma: float, T: float, 
                            n_sims: int, seed: int) -> np.ndarray:
     """Fast terminal value generation."""

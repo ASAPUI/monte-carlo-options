@@ -6,8 +6,8 @@ import numpy as np
 from typing import Optional, Tuple, Dict, List
 from scipy import stats
 
-from simulator import GBMSimulator
-from black_scholes import BlackScholes
+from .simulator import GBMSimulator
+from .black_scholes import BlackScholes
 
 
 class EuropeanPricer:
